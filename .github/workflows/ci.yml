@@ -51,7 +51,7 @@ jobs:
         run: python -m pytest -q
   image:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -105,5 +105,6 @@ jobs:
       - name: Push image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker push "${IMAGE_NAME}:${GITHUB_SHA}"
-          docker push "${IMAGE_NAME}:latest"
+          docker push "${IMAGE_NAME}:${GITHUB_SHA}" | tee push-sha.log
+          docker push "${IMAGE_NAME}:latest" | tee push-latest.log
+          grep -E 'digest: sha256:' push-sha.log push-latest.log
