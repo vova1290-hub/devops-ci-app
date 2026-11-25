@@ -108,3 +108,27 @@ jobs:
           docker push "${IMAGE_NAME}:${GITHUB_SHA}" | tee push-sha.log
           docker push "${IMAGE_NAME}:latest" | tee push-latest.log
           grep -E 'digest: sha256:' push-sha.log push-latest.log
+
+  deploy:
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, devops-vm]
+    permissions:
+      contents: read
+    concurrency:
+      group: deploy-devops-vm
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Deploy with Ansible
+        working-directory: ansible
+        run: ansible-playbook site.yml -e "app_tag=$GITHUB_SHA"
+      - name: Check through Nginx
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 15 "http://${DEVOPS_VM_HOST}/health"
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 15 "http://${DEVOPS_VM_HOST}/"
+          ssh -i "$DEVOPS_SSH_KEY" -o BatchMode=yes -o UserKnownHostsFile=/private/tmp/pr11-work/known_hosts -o StrictHostKeyChecking=yes "devops@${DEVOPS_VM_HOST}" "docker inspect -f '{{.Config.Image}}' devops-ci-app"
