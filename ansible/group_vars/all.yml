@@ -1,0 +1,6 @@
+---
+app_image: "ghcr.io/vova1290-hub/devops-ci-app"
+app_tag: "7ac2890c45ac483888cc830789670af2d6efb04d"
+app_container_name: "devops-ci-app"
+app_host_port: 5000
+app_internal_port: 5000
